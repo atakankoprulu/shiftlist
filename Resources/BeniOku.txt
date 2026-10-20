@@ -1,0 +1,37 @@
+SHIFTLIST
+Finder'da dosya seç, Shift'e bir kez bas: dönüştür, düzenle, paylaş.
+
+GEREKSİNİMLER
+• M çipli Mac (M1, M2, M3, M4…). Intel Mac'lerde çalışmaz.
+• macOS 14 veya üstü. Cam görünüm ve gömülü ffmpeg (video/ses işlemleri) için macOS 26 gerekir.
+
+KURULUM
+1. Shiftlist'yı yandaki Applications (Uygulamalar) klasörüne sürükle.
+2. Uygulamalar'dan Shiftlist'yı aç.
+3. macOS "Apple doğrulayamadı" derse:
+   Sistem Ayarları › Gizlilik ve Güvenlik › en altta "Shiftlist" için "Yine de Aç"a bas.
+   (Shiftlist App Store'dan gelmediği ve Apple geliştirici imzası olmadığı için bu bir kerelik bir uyarı.)
+
+İZİNLER (ilk açılışta bir kez)
+• Erişilebilirlik: Shift'e basışı algılamak için. Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik › Shiftlist'yı aç.
+• Finder'ı denetleme: Seçili dosyayı görmek için. Çıkan soruda "İzin Ver".
+• Bildirimler: İş bitince haber vermek için.
+"Shiftlist hazır" bildirimi gelince kullanmaya başlayabilirsin.
+
+KULLANIM
+Finder'da bir ya da birkaç dosya seç, Shift'e bir kez bas ve bırak. Liste imlecin olduğu yerde açılır.
+  ⇧ Shift     Dönüştür   — JPG, PNG, HEIC, PDF, MP4, MP3, DOCX, ZIP…
+  ⌃ Control   Araçlar    — sıkıştır, metadata sil, kırp, karart, kes, hız, böl…
+  ⌘ Command   İşlemler   — AirDrop, sabitle, kopyala, taşı, yolu kopyala, Terminal
+Esc kapatır. 1–9 tuşlarıyla da seçebilirsin. Yeni dosya her zaman orijinalin yanına kaydedilir; orijinale dokunulmaz.
+Menü çubuğundaki Shiftlist simgesinden ayarlara ve "Girişte Başlat"a ulaşabilirsin.
+
+NOTLAR
+• Markdown ve EPUB dönüştürme için pandoc gerekir (Homebrew: brew install pandoc). Kurulu değilse bu seçenekler görünmez.
+• Word → PDF, Pages yüklüyse Pages ile yapılır (daha iyi sayfa düzeni).
+• Option tuşuna arka arkaya 5 kez basmak macOS'ta "Fare Tuşları"nı açar (klavye harfleri imleci oynatmaya başlar).
+  Olursa Option'a tekrar 5 kez bas.
+
+LİSANS
+Video ve ses işlemleri için içinde FFmpeg (https://ffmpeg.org) bulunur. FFmpeg GPL lisanslıdır;
+kaynak kodu https://ffmpeg.org/download.html adresinden alınabilir.

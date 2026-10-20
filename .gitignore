@@ -1,0 +1,7 @@
+.build/
+.build.nosync/
+build/
+.DS_Store
+scripts/.venv.nosync/
+build.nosync/
+Shiftlist.dmg
