@@ -93,14 +93,16 @@ enum Tools {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: pagesBundleID) != nil
     }
 
-    /// Prefers the copy bundled inside the app (built against macOS 26, so only used there), then
+    /// Prefers the copy bundled inside the app (an arm64 build against macOS 26, so only used there), then
     /// Homebrew's usual prefixes, since GUI apps don't inherit the shell PATH.
     private static func find(_ name: String) -> String? {
+        #if arch(arm64)
         if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26,
            let bundled = Bundle.main.url(forAuxiliaryExecutable: name)?.path,
            FileManager.default.isExecutableFile(atPath: bundled) {
             return bundled
         }
+        #endif
         for dir in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"] {
             let path = dir + "/" + name
             if FileManager.default.isExecutableFile(atPath: path) { return path }

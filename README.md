@@ -16,8 +16,9 @@ The interface is in English and Turkish and follows your system language.
 
 ## Requirements
 
-- Apple silicon Mac
+- Apple silicon or Intel Mac
 - macOS 14 or later (macOS 26 for the glass look and the bundled ffmpeg)
+- On Intel Macs the bundled ffmpeg isn't used; video and audio tools need `brew install ffmpeg`
 - Optional: [pandoc](https://pandoc.org) for Markdown / EPUB conversion, Pages for better Word → PDF
 
 ## Build

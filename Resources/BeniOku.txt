@@ -2,8 +2,9 @@ SHIFTLIST
 Finder'da dosya seç, Shift'e bir kez bas: dönüştür, düzenle, paylaş.
 
 GEREKSİNİMLER
-• M çipli Mac (M1, M2, M3, M4…). Intel Mac'lerde çalışmaz.
+• M çipli ya da Intel Mac.
 • macOS 14 veya üstü. Cam görünüm ve gömülü ffmpeg (video/ses işlemleri) için macOS 26 gerekir.
+• Intel Mac'lerde video ve ses işlemleri için Homebrew'dan ffmpeg gerekir (brew install ffmpeg).
 
 KURULUM
 1. Shiftlist'i yandaki Applications (Uygulamalar) klasörüne sürükle.

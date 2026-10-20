@@ -2,8 +2,9 @@ SHIFTLIST
 Select files in Finder, tap Shift once: convert, edit, share.
 
 REQUIREMENTS
-• Apple silicon Mac (M1, M2, M3, M4…). Doesn't run on Intel Macs.
+• Apple silicon or Intel Mac.
 • macOS 14 or later. The glass look and the bundled ffmpeg (video/audio tools) need macOS 26.
+• On Intel Macs the video and audio tools need ffmpeg from Homebrew (brew install ffmpeg).
 
 INSTALL
 1. Drag Shiftlist onto the Applications folder next to it.

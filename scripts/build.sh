@@ -3,12 +3,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-swift build -c release --arch arm64 --scratch-path .build.nosync
+# One build per architecture, joined into a universal binary (a single multi-arch build needs full Xcode).
+# Each gets its own scratch path; sharing one confuses SwiftPM on the next build.
+for ARCH in arm64 x86_64; do
+    swift build -c release --arch "$ARCH" --scratch-path ".build.nosync/$ARCH"
+done
 
 APP=build.nosync/Shiftlist.app
 rm -rf "$APP"
 mkdir -p build.nosync "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build.nosync/arm64-apple-macosx/release/Shiftlist "$APP/Contents/MacOS/"
+lipo -create .build.nosync/arm64/arm64-apple-macosx/release/Shiftlist .build.nosync/x86_64/x86_64-apple-macosx/release/Shiftlist -output "$APP/Contents/MacOS/Shiftlist"
 cp Resources/Info.plist "$APP/Contents/"
 cp -R Resources/*.lproj "$APP/Contents/Resources/"
 [ -f build.nosync/AppIcon.icns ] || swift scripts/make-icon.swift build.nosync/AppIcon.icns
