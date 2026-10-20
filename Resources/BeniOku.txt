@@ -6,14 +6,14 @@ GEREKSİNİMLER
 • macOS 14 veya üstü. Cam görünüm ve gömülü ffmpeg (video/ses işlemleri) için macOS 26 gerekir.
 
 KURULUM
-1. Shiftlist'yı yandaki Applications (Uygulamalar) klasörüne sürükle.
-2. Uygulamalar'dan Shiftlist'yı aç.
+1. Shiftlist'i yandaki Applications (Uygulamalar) klasörüne sürükle.
+2. Uygulamalar'dan Shiftlist'i aç.
 3. macOS "Apple doğrulayamadı" derse:
    Sistem Ayarları › Gizlilik ve Güvenlik › en altta "Shiftlist" için "Yine de Aç"a bas.
    (Shiftlist App Store'dan gelmediği ve Apple geliştirici imzası olmadığı için bu bir kerelik bir uyarı.)
 
 İZİNLER (ilk açılışta bir kez)
-• Erişilebilirlik: Shift'e basışı algılamak için. Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik › Shiftlist'yı aç.
+• Erişilebilirlik: Shift'e basışı algılamak için. Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik › Shiftlist'i aç.
 • Finder'ı denetleme: Seçili dosyayı görmek için. Çıkan soruda "İzin Ver".
 • Bildirimler: İş bitince haber vermek için.
 "Shiftlist hazır" bildirimi gelince kullanmaya başlayabilirsin.

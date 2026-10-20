@@ -44,7 +44,7 @@ func render(scale: CGFloat) -> Data {
     }
 
     text("Shiftlist", y: 34, size: 26, weight: .bold, color: NSColor(red: 0.12, green: 0.16, blue: 0.32, alpha: 1))
-    text("Kurmak için Shiftlist'yı Uygulamalar klasörüne sürükle", y: 74, size: 13.5, weight: .medium,
+    text("Kurmak için Shiftlist'i Uygulamalar klasörüne sürükle", y: 74, size: 13.5, weight: .medium,
          color: NSColor(red: 0.30, green: 0.35, blue: 0.50, alpha: 1))
 
     // Curved arrow from the app to Applications.
