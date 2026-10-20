@@ -28,7 +28,7 @@ enum FileOps {
         if let maxSide, max(image.width, image.height) > maxSide {
             out = try resized(image, maxSide: maxSide)
         }
-        let dst = output(src, "sıkıştırılmış", ext: outExt)
+        let dst = output(src, String(localized: "compressed"), ext: outExt)
         try writeImage(out, to: dst, ext: outExt, quality: quality, metadataFrom: source)
         return dst
     }
@@ -40,7 +40,7 @@ enum FileOps {
         let size = CGSize(width: w + pad * 2, height: h + pad * 2)
         guard let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-            throw ConvertError("Görsel işlenemedi")
+            throw ConvertError("Couldn’t process the image")
         }
         let stops: [(NSColor, NSColor)] = [
             (.white, NSColor(white: 0.94, alpha: 1)),
@@ -65,9 +65,9 @@ enum FileOps {
         ctx.clip()
         ctx.draw(image, in: rect)
 
-        guard let result = ctx.makeImage() else { throw ConvertError("Görsel işlenemedi") }
+        guard let result = ctx.makeImage() else { throw ConvertError("Couldn’t process the image") }
         let outExt = ["jpg", "heic"].contains(fileFormat(src)) ? fileFormat(src) : "png"
-        let dst = output(src, "arka planlı", ext: outExt)
+        let dst = output(src, String(localized: "with background"), ext: outExt)
         try writeImage(outExt == "jpg" ? ConversionJob.flattened(result) : result, to: dst, ext: outExt, quality: 0.92, metadataFrom: nil)
         return dst
     }
@@ -75,7 +75,7 @@ enum FileOps {
     private static func loadImage(_ src: URL) throws -> (CGImageSource, CGImage) {
         guard let source = CGImageSourceCreateWithURL(src as CFURL, nil),
               let image = ConversionJob.orientedImage(source, index: ConversionJob.bestIndex(source)) else {
-            throw ConvertError("Görsel okunamadı")
+            throw ConvertError("Couldn’t read the image")
         }
         return (source, image)
     }
@@ -86,17 +86,17 @@ enum FileOps {
         let space = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: space,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-            throw ConvertError("Görsel küçültülemedi")
+            throw ConvertError("Couldn’t shrink the image")
         }
         ctx.interpolationQuality = .high
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-        guard let out = ctx.makeImage() else { throw ConvertError("Görsel küçültülemedi") }
+        guard let out = ctx.makeImage() else { throw ConvertError("Couldn’t shrink the image") }
         return out
     }
 
     static func writeImage(_ image: CGImage, to dst: URL, ext: String, quality: Double, metadataFrom source: CGImageSource?) throws {
         guard let dest = CGImageDestinationCreateWithURL(dst as CFURL, ConversionJob.imageType(for: ext) as CFString, 1, nil) else {
-            throw ConvertError("\(ext.uppercased()) yazılamıyor")
+            throw ConvertError("Can’t write \(ext.uppercased())")
         }
         var props: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: quality, kCGImagePropertyOrientation: 1]
         if let source, let meta = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
@@ -106,20 +106,20 @@ enum FileOps {
         }
         let final = ext == "jpg" ? try ConversionJob.flattened(image) : image
         CGImageDestinationAddImage(dest, final, props as CFDictionary)
-        guard CGImageDestinationFinalize(dest) else { throw ConvertError("Görsel kaydedilemedi") }
+        guard CGImageDestinationFinalize(dest) else { throw ConvertError("Couldn’t save the image") }
     }
 
     // MARK: - Metadata
 
     static func stripMetadata(_ src: URL) throws -> URL {
-        let dst = output(src, "metadatasız", ext: fileFormat(src) == "tgz" ? "tar.gz" : src.pathExtension.lowercased())
+        let dst = output(src, String(localized: "no metadata"), ext: fileFormat(src) == "tgz" ? "tar.gz" : src.pathExtension.lowercased())
         do {
             switch Kind.of(src) {
             case .image: try stripImageMetadata(src, dst)
             case .video, .audio:
                 try runFFmpeg(["-i", src.path, "-map", "0", "-map_metadata", "-1", "-map_chapters", "-1", "-c", "copy"], output: dst)
             case .pdf: try stripPDFMetadata(src, dst)
-            default: throw ConvertError("Bu dosyada metadata silinemiyor")
+            default: throw ConvertError("Can’t strip metadata from this file")
             }
         } catch {
             try? FileManager.default.removeItem(at: dst)
@@ -135,14 +135,14 @@ enum FileOps {
         let outExt = ["jpg", "png", "heic", "tiff", "gif", "bmp", "avif"].contains(ext) ? ext : "png"
         if CGImageSourceGetCount(source) > 1 && ext == "gif" {
             guard let dest = CGImageDestinationCreateWithURL(dst as CFURL, ConversionJob.imageType(for: "gif") as CFString,
-                                                             CGImageSourceGetCount(source), nil) else { throw ConvertError("GIF yazılamıyor") }
+                                                             CGImageSourceGetCount(source), nil) else { throw ConvertError("Can’t write GIF") }
             for i in 0..<CGImageSourceGetCount(source) {
                 let delay = (CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [CFString: Any])?[kCGImagePropertyGIFDictionary]
                 if let frame = CGImageSourceCreateImageAtIndex(source, i, nil) {
                     CGImageDestinationAddImage(dest, frame, delay.map { [kCGImagePropertyGIFDictionary: $0] as CFDictionary })
                 }
             }
-            guard CGImageDestinationFinalize(dest) else { throw ConvertError("GIF kaydedilemedi") }
+            guard CGImageDestinationFinalize(dest) else { throw ConvertError("Couldn’t save GIF") }
             return
         }
         // Same format: copy the compressed image data as is and drop the metadata, so nothing is re-encoded.
@@ -168,14 +168,14 @@ enum FileOps {
     }
 
     private static func stripPDFMetadata(_ src: URL, _ dst: URL) throws {
-        guard let doc = PDFDocument(url: src) else { throw ConvertError("PDF açılamadı") }
-        if doc.isLocked { throw ConvertError("PDF şifreli") }
+        guard let doc = PDFDocument(url: src) else { throw ConvertError("Couldn’t open the PDF") }
+        if doc.isLocked { throw ConvertError("The PDF is encrypted") }
         let clean = PDFDocument()
         for i in 0..<doc.pageCount {
             if let page = doc.page(at: i)?.copy() as? PDFPage { clean.insert(page, at: clean.pageCount) }
         }
         clean.documentAttributes = [PDFDocumentAttribute.creatorAttribute: "", PDFDocumentAttribute.producerAttribute: ""]
-        guard clean.write(to: dst) else { throw ConvertError("PDF yazılamadı") }
+        guard clean.write(to: dst) else { throw ConvertError("Couldn’t write the PDF") }
     }
 
     // MARK: - Video
@@ -192,14 +192,14 @@ enum FileOps {
         if let side {
             filter = "scale='min(iw,\(side))':'min(ih,\(side))':force_original_aspect_ratio=decrease:force_divisible_by=2"
         }
-        let dst = output(src, "sıkıştırılmış", ext: "mp4")
+        let dst = output(src, String(localized: "compressed"), ext: "mp4")
         try runFFmpeg(["-i", src.path, "-vf", filter, "-c:v", "libx264", "-preset", "medium", "-crf", crf, "-pix_fmt", "yuv420p",
                        "-c:a", "aac", "-b:a", level == .strong ? "96k" : "128k", "-sn", "-dn", "-movflags", "+faststart"], output: dst)
         return dst
     }
 
     static func mute(_ src: URL) throws -> URL {
-        let dst = output(src, "sessiz", ext: src.pathExtension.lowercased())
+        let dst = output(src, String(localized: "muted"), ext: src.pathExtension.lowercased())
         try runFFmpeg(["-i", src.path, "-map", "0:v", "-c", "copy", "-an"], output: dst)
         return dst
     }
@@ -215,7 +215,7 @@ enum FileOps {
 
     static func changeSpeed(_ src: URL, factor: Double) throws -> URL {
         let ext = videoExt(src)
-        let label = factor == factor.rounded() ? "\(Int(factor))x" : String(format: "%.1fx", factor).replacingOccurrences(of: ".", with: ",")
+        let label = factor.formatted(.number.precision(.fractionLength(0...1))) + "x"
         let dst = output(src, label, ext: ext)
         let audio = hasAudio(src) ? "atempo=\(factor)" : nil
         try runFFmpeg(["-i", src.path] + ConversionJob.mediaArgs(for: ext, videoFilter: "setpts=PTS/\(factor)", audioFilter: audio), output: dst)
@@ -224,7 +224,7 @@ enum FileOps {
 
     static func splitVideo(_ src: URL, parts: Int) throws -> URL {
         let duration = try mediaDuration(src)
-        let folder = uniqueURL(in: src.deletingLastPathComponent(), base: "\(baseName(src)) (parçalar)", ext: nil)
+        let folder = uniqueURL(in: src.deletingLastPathComponent(), base: "\(baseName(src)) (\(String(localized: "parts")))", ext: nil)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
         let length = duration / Double(parts)
         for i in 0..<parts {
@@ -239,7 +239,7 @@ enum FileOps {
     static func trim(_ src: URL, start: Double, end: Double) throws -> URL {
         let isVideo = Kind.of(src) == .video
         let ext = isVideo ? videoExt(src) : src.pathExtension.lowercased()
-        let dst = output(src, "kesilmiş", ext: ext)
+        let dst = output(src, String(localized: "trimmed"), ext: ext)
         let codec = isVideo ? try ConversionJob.mediaArgs(for: ext) : ["-c", "copy"]
         try runFFmpeg(["-ss", String(format: "%.3f", start), "-i", src.path, "-t", String(format: "%.3f", end - start)] + codec, output: dst)
         return dst
@@ -250,15 +250,15 @@ enum FileOps {
     static func compressAudio(_ src: URL, _ level: Level) throws -> URL {
         let bitrate = ["192k", "128k", "64k"][level.rawValue]
         let aac = ["m4a", "aac"].contains(fileFormat(src))
-        let dst = output(src, "sıkıştırılmış", ext: aac ? "m4a" : "mp3")
+        let dst = output(src, String(localized: "compressed"), ext: aac ? "m4a" : "mp3")
         try runFFmpeg(["-i", src.path, "-vn", "-c:a", aac ? "aac" : "libmp3lame", "-b:a", bitrate], output: dst)
         return dst
     }
 
     static func normalize(_ src: URL) throws -> URL {
         // loudnorm measures over a 3 s window and outputs nothing for shorter clips.
-        if let duration = try? mediaDuration(src), duration < 3 { throw ConvertError("Normalize için ses en az 3 saniye olmalı") }
-        return try reencodeAudio(src, suffix: "normalize", filter: "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000")
+        if let duration = try? mediaDuration(src), duration < 3 { throw ConvertError("Normalizing needs at least 3 seconds of audio") }
+        return try reencodeAudio(src, suffix: String(localized: "normalized"), filter: "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000")
     }
 
     static func setChannels(_ src: URL, _ channels: Int) throws -> URL {
@@ -280,10 +280,10 @@ enum FileOps {
     }
 
     private static func mediaDuration(_ src: URL) throws -> Double {
-        guard let ffprobe = Tools.ffprobe else { throw ConvertError("ffprobe bulunamadı") }
+        guard let ffprobe = Tools.ffprobe else { throw ConvertError("ffprobe not found") }
         let out = try captureTool(ffprobe, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", src.path])
         guard let value = Double(out.trimmingCharacters(in: .whitespacesAndNewlines)), value > 0 else {
-            throw ConvertError("Süre okunamadı")
+            throw ConvertError("Couldn’t read the duration")
         }
         return value
     }
@@ -291,19 +291,19 @@ enum FileOps {
     // MARK: - PDF
 
     static func compressPDF(_ src: URL) throws -> URL {
-        guard let doc = PDFDocument(url: src) else { throw ConvertError("PDF açılamadı") }
-        if doc.isLocked { throw ConvertError("PDF şifreli") }
-        let dst = output(src, "sıkıştırılmış", ext: "pdf")
+        guard let doc = PDFDocument(url: src) else { throw ConvertError("Couldn’t open the PDF") }
+        if doc.isLocked { throw ConvertError("The PDF is encrypted") }
+        let dst = output(src, String(localized: "compressed"), ext: "pdf")
         let options: [PDFDocumentWriteOption: Any] = [.saveImagesAsJPEGOption: true, .optimizeImagesForScreenOption: true]
-        guard doc.write(to: dst, withOptions: options) else { throw ConvertError("PDF yazılamadı") }
+        guard doc.write(to: dst, withOptions: options) else { throw ConvertError("Couldn’t write the PDF") }
         return dst
     }
 
     static func splitPDF(_ src: URL) throws -> URL {
-        guard let doc = PDFDocument(url: src) else { throw ConvertError("PDF açılamadı") }
-        if doc.isLocked { throw ConvertError("PDF şifreli") }
-        guard doc.pageCount > 1 else { throw ConvertError("PDF'te tek sayfa var") }
-        let folder = uniqueURL(in: src.deletingLastPathComponent(), base: "\(baseName(src)) (sayfalar)", ext: nil)
+        guard let doc = PDFDocument(url: src) else { throw ConvertError("Couldn’t open the PDF") }
+        if doc.isLocked { throw ConvertError("The PDF is encrypted") }
+        guard doc.pageCount > 1 else { throw ConvertError("The PDF has only one page") }
+        let folder = uniqueURL(in: src.deletingLastPathComponent(), base: "\(baseName(src)) (\(String(localized: "pages")))", ext: nil)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
         let digits = String(doc.pageCount).count
         for i in 0..<doc.pageCount {
@@ -333,7 +333,7 @@ enum FileOps {
 
     // MARK: - Helpers
 
-    /// "tatil.jpg" + "sıkıştırılmış" → "tatil (sıkıştırılmış).jpg", numbered if taken.
+    /// "holiday.jpg" + "compressed" → "holiday (compressed).jpg", numbered if taken.
     static func output(_ src: URL, _ suffix: String, ext: String) -> URL {
         uniqueURL(in: src.deletingLastPathComponent(), base: "\(baseName(src)) (\(suffix))", ext: ext)
     }

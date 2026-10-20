@@ -109,7 +109,7 @@ struct PaletteView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 34, height: 34)
             VStack(alignment: .leading, spacing: 2) {
-                Text(files.count == 1 ? files[0].lastPathComponent : "\(files.count) dosya")
+                Text(files.count == 1 ? files[0].lastPathComponent : String(localized: "\(files.count) files"))
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -133,7 +133,7 @@ struct PaletteView: View {
     }
 
     private var subtitle: String {
-        guard files.count == 1 else { return "Birden çok dosya" }
+        guard files.count == 1 else { return String(localized: "Multiple files") }
         return (try? files[0].resourceValues(forKeys: [.localizedTypeDescriptionKey]))?.localizedTypeDescription ?? ""
     }
 
@@ -168,7 +168,7 @@ struct PaletteView: View {
     private var list: some View {
         VStack(spacing: 0) {
             if model.items.isEmpty {
-                Text("Bu dosya için \(model.mode.title.lowercased(with: Locale(identifier: "tr"))) yok")
+                Text(model.mode.emptyMessage)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

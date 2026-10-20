@@ -36,9 +36,9 @@ final class PDFOrganizerModel: ObservableObject {
             page.rotation = (page.rotation + p.rotation) % 360
             out.insert(page, at: out.pageCount)
         }
-        guard out.pageCount > 0 else { throw ConvertError("Hiç sayfa kalmadı") }
-        let dst = FileOps.output(url, "düzenlendi", ext: "pdf")
-        guard out.write(to: dst) else { throw ConvertError("PDF yazılamadı") }
+        guard out.pageCount > 0 else { throw ConvertError("No pages left") }
+        let dst = FileOps.output(url, String(localized: "edited"), ext: "pdf")
+        guard out.write(to: dst) else { throw ConvertError("Couldn’t write the PDF") }
         return dst
     }
 }
@@ -50,13 +50,13 @@ struct PDFOrganizerView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Sıralamak için sürükle. \(model.pages.count) sayfa")
+                Text("Drag to reorder. \(model.pages.count) pages")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Vazgeç") { onDone(nil) }.keyboardShortcut(.cancelAction)
-                Button("Kaydet") {
+                Button("Cancel") { onDone(nil) }.keyboardShortcut(.cancelAction)
+                Button("Save") {
                     do { onDone(try model.save()) } catch {
-                        Notifier.shared.post(title: "Kaydedilemedi", body: error.localizedDescription, reveal: [])
+                        Notifier.shared.post(title: String(localized: "Couldn’t save"), body: error.localizedDescription, reveal: [])
                     }
                 }
                 .keyboardShortcut("s", modifiers: .command)
@@ -96,10 +96,10 @@ struct PDFOrganizerView: View {
                 Text("\(number)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 Button { rotate(page) } label: { Image(systemName: "rotate.right") }
                     .buttonStyle(.borderless)
-                    .help("Döndür")
+                    .help("Rotate")
                 Button { withAnimation { model.pages.removeAll { $0.id == page.id } } } label: { Image(systemName: "trash") }
                     .buttonStyle(.borderless)
-                    .help("Sil")
+                    .help("Delete")
             }
         }
     }
@@ -134,12 +134,13 @@ struct PDFOrganizerView: View {
 enum PDFOrganizer {
     static func show(_ url: URL) {
         guard let model = PDFOrganizerModel(url: url) else {
-            Notifier.shared.post(title: "Açılamadı", body: "\(url.lastPathComponent) okunamadı ya da şifreli.", reveal: [])
+            Notifier.shared.post(title: String(localized: "Couldn’t open"),
+                                 body: String(localized: "\(url.lastPathComponent) couldn’t be read or is encrypted."), reveal: [])
             return
         }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
                               styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "\(url.lastPathComponent) — Sayfalar"
+        window.title = "\(url.lastPathComponent) — \(String(localized: "Pages"))"
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: PDFOrganizerView(model: model) { [weak window] saved in
             window?.close()

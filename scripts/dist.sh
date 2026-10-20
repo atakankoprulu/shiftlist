@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds build.nosync/Shiftlist.dmg for sharing: ffmpeg bundled inside the app, plus a Turkish read-me.
+# Builds build.nosync/Shiftlist.dmg for sharing: ffmpeg bundled inside the app, plus English and Turkish read-mes.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,13 +18,14 @@ STAGE=build.nosync/dmg
 rm -rf "$STAGE" build.nosync/Shiftlist.dmg
 mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
+cp Resources/ReadMe.txt "$STAGE/Read Me.txt"
 cp Resources/BeniOku.txt "$STAGE/Beni Oku.txt"
 swift scripts/make-dmg-background.swift "$STAGE"
-tiffutil -cathidpicheck "$STAGE/arkaplan.png" "$STAGE/arkaplan@2x.png" -out "$STAGE/arkaplan.tiff" 2>/dev/null
+tiffutil -cathidpicheck "$STAGE/background.png" "$STAGE/background@2x.png" -out "$STAGE/background.tiff" 2>/dev/null
 
 [ -x scripts/.venv.nosync/bin/dmgbuild ] || { python3 -m venv scripts/.venv.nosync && scripts/.venv.nosync/bin/pip install -q dmgbuild; }
 scripts/.venv.nosync/bin/dmgbuild -s scripts/dmg-settings.py \
-    -D stage="$STAGE" -D background="$STAGE/arkaplan.tiff" -D icon=build.nosync/AppIcon.icns \
+    -D stage="$STAGE" -D background="$STAGE/background.tiff" -D icon=build.nosync/AppIcon.icns \
     "Shiftlist" build.nosync/Shiftlist.dmg >/dev/null
 rm -rf "$STAGE"
 cp build.nosync/Shiftlist.dmg Shiftlist.dmg

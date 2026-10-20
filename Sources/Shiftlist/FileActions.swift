@@ -7,7 +7,7 @@ enum FileActions {
         guard let service = NSSharingService(named: .sendViaAirDrop) else { return }
         NSApp.activate(ignoringOtherApps: true)
         guard service.canPerform(withItems: files) else {
-            Notifier.shared.post(title: "AirDrop kullanılamıyor", body: "Wi-Fi ve Bluetooth açık mı?", reveal: [])
+            Notifier.shared.post(title: String(localized: "AirDrop isn’t available"), body: String(localized: "Are Wi-Fi and Bluetooth on?"), reveal: [])
             return
         }
         service.perform(withItems: files)
@@ -20,15 +20,16 @@ enum FileActions {
     static func copy(_ files: [URL]) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects(files as [NSURL])
-        Notifier.shared.post(title: "Kopyalandı", body: files.count == 1
-            ? "\(files[0].lastPathComponent) — Finder'da ⌘V ile yapıştır."
-            : "\(files.count) dosya — Finder'da ⌘V ile yapıştır.", reveal: [])
+        Notifier.shared.post(title: String(localized: "Copied"), body: files.count == 1
+            ? String(localized: "\(files[0].lastPathComponent) — paste in Finder with ⌘V.")
+            : String(localized: "\(files.count) files — paste in Finder with ⌘V."), reveal: [])
     }
 
     static func copyPath(_ files: [URL]) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(files.map(\.path).joined(separator: "\n"), forType: .string)
-        Notifier.shared.post(title: "Yol kopyalandı", body: files.count == 1 ? files[0].path : "\(files.count) dosyanın yolu", reveal: [])
+        Notifier.shared.post(title: String(localized: "Path copied"),
+                             body: files.count == 1 ? files[0].path : String(localized: "Paths of \(files.count) files"), reveal: [])
     }
 
     static func move(_ files: [URL]) {
@@ -37,8 +38,9 @@ enum FileActions {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.prompt = "Buraya Taşı"
-        panel.message = files.count == 1 ? "\(files[0].lastPathComponent) nereye taşınsın?" : "\(files.count) dosya nereye taşınsın?"
+        panel.prompt = String(localized: "Move Here")
+        panel.message = files.count == 1 ? String(localized: "Where should \(files[0].lastPathComponent) go?")
+                                          : String(localized: "Where should \(files.count) files go?")
         panel.directoryURL = files[0].deletingLastPathComponent()
         guard panel.runModal() == .OK, let dir = panel.url else { return }
 
@@ -50,7 +52,7 @@ enum FileActions {
                 try FileManager.default.moveItem(at: file, to: dst)
                 moved.append(dst)
             } catch {
-                Notifier.shared.post(title: "Taşınamadı", body: "\(file.lastPathComponent): \(error.localizedDescription)", reveal: [])
+                Notifier.shared.post(title: String(localized: "Couldn’t move"), body: "\(file.lastPathComponent): \(error.localizedDescription)", reveal: [])
             }
         }
         if !moved.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(moved) }

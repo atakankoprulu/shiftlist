@@ -6,8 +6,8 @@ stage = defines["stage"]
 volume_name = "Shiftlist"
 format = "UDZO"
 icon = defines["icon"]
-files = [f"{stage}/Shiftlist.app", f"{stage}/Beni Oku.txt"]
-symlinks = {"Uygulamalar": "/Applications"}
+files = [f"{stage}/Shiftlist.app", f"{stage}/Read Me.txt", f"{stage}/Beni Oku.txt"]
+symlinks = {"Applications": "/Applications"}
 
 background = defines["background"]
 window_rect = ((240, 160), (640, 420))
@@ -21,6 +21,7 @@ show_pathbar = False
 show_sidebar = False
 icon_locations = {
     "Shiftlist.app": (170, 215),
-    "Uygulamalar": (470, 215),
-    "Beni Oku.txt": (320, 355),
+    "Applications": (470, 215),
+    "Read Me.txt": (250, 355),
+    "Beni Oku.txt": (390, 355),
 }

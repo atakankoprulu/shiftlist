@@ -5,9 +5,17 @@ enum PaletteMode: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .convert: return "Dönüştür"
-        case .tools: return "Araçlar"
-        case .actions: return "İşlemler"
+        case .convert: return String(localized: "Convert")
+        case .tools: return String(localized: "Tools")
+        case .actions: return String(localized: "Actions")
+        }
+    }
+
+    var emptyMessage: String {
+        switch self {
+        case .convert: return String(localized: "No conversions for this file")
+        case .tools: return String(localized: "No tools for this file")
+        case .actions: return String(localized: "No actions for this file")
         }
     }
 
@@ -84,82 +92,83 @@ enum Menus {
         var items: [PaletteItem] = []
         switch kind {
         case .image:
-            items.append(levels("Sıkıştır", "arrow.down.right.and.arrow.up.left") { try FileOps.compressImage($0, $1) })
+            items.append(levels(String(localized: "Compress"), "arrow.down.right.and.arrow.up.left") { try FileOps.compressImage($0, $1) })
             items.append(metadata)
             if single {
-                items.append(editor("Düzenle", "slider.horizontal.3", .adjust, files[0]))
-                items.append(editor("Not ekle", "pencil.tip", .annotate, files[0]))
+                items.append(editor(String(localized: "Edit"), "slider.horizontal.3", .adjust, files[0]))
+                items.append(editor(String(localized: "Annotate"), "pencil.tip", .annotate, files[0]))
             }
-            items.append(PaletteItem(id: "bg", title: "Arka plan", symbol: "photo.on.rectangle.angled", children: [
-                ("Beyaz", 0), ("Siyah", 1), ("Gün batımı", 2), ("Okyanus", 3),
+            items.append(PaletteItem(id: "bg", title: String(localized: "Background"), symbol: "photo.on.rectangle.angled", children: [
+                (String(localized: "White"), 0), (String(localized: "Black"), 1), (String(localized: "Sunset"), 2), (String(localized: "Ocean"), 3),
             ].map { name, style in
-                PaletteItem(id: "bg-\(style)", title: name, action: .each(label: "Arka plan", sizes: false) {
+                PaletteItem(id: "bg-\(style)", title: name, action: .each(label: String(localized: "Background"), sizes: false) {
                     try FileOps.addBackground($0, style: style)
                 })
             }))
             if single {
-                items.append(editor("Kırp", "crop", .crop, files[0]))
-                items.append(editor("Karart", "eye.slash", .redact, files[0]))
+                items.append(editor(String(localized: "Crop"), "crop", .crop, files[0]))
+                items.append(editor(String(localized: "Redact"), "eye.slash", .redact, files[0]))
             }
 
         case .video where hasFFmpeg:
-            items.append(levels("Sıkıştır", "arrow.down.right.and.arrow.up.left") { try FileOps.compressVideo($0, $1) })
+            items.append(levels(String(localized: "Compress"), "arrow.down.right.and.arrow.up.left") { try FileOps.compressVideo($0, $1) })
             items.append(metadata)
-            items.append(PaletteItem(id: "mute", title: "Sessiz", symbol: "speaker.slash",
-                                  action: .each(label: "Sessiz", sizes: false) { try FileOps.mute($0) }))
+            items.append(PaletteItem(id: "mute", title: String(localized: "Mute"), symbol: "speaker.slash",
+                                  action: .each(label: String(localized: "Muted"), sizes: false) { try FileOps.mute($0) }))
             if playable {
-                items.append(PaletteItem(id: "trim", title: "Kes", symbol: "scissors", action: .ui { MediaWindow.show($0[0], mode: .trim) }))
+                items.append(PaletteItem(id: "trim", title: String(localized: "Trim"), symbol: "scissors", action: .ui { MediaWindow.show($0[0], mode: .trim) }))
             }
-            items.append(PaletteItem(id: "vcrop", title: "Kırp", symbol: "crop", children: [
-                ("Kare", 1, 1), ("Dikey 9:16", 9, 16), ("Yatay 16:9", 16, 9), ("4:5", 4, 5),
+            items.append(PaletteItem(id: "vcrop", title: String(localized: "Crop"), symbol: "crop", children: [
+                (String(localized: "Square"), 1, 1), (String(localized: "Portrait 9:16"), 9, 16), (String(localized: "Landscape 16:9"), 16, 9), ("4:5", 4, 5),
             ].map { name, w, h in
                 PaletteItem(id: "vcrop-\(w)x\(h)", title: name, action: .each(label: name, sizes: false) {
                     try FileOps.cropVideo($0, w: w, h: h)
                 })
             }))
-            items.append(PaletteItem(id: "speed", title: "Hız", symbol: "gauge.with.dots.needle.67percent", children: [
-                ("0,5×", 0.5), ("1,5×", 1.5), ("2×", 2), ("4×", 4),
-            ].map { name, factor in
-                PaletteItem(id: "speed-\(factor)", title: name, action: .each(label: "Hız \(name)", sizes: false) {
+            items.append(PaletteItem(id: "speed", title: String(localized: "Speed"), symbol: "gauge.with.dots.needle.67percent", children: [
+                0.5, 1.5, 2, 4,
+            ].map { factor in
+                let name = factor.formatted(.number.precision(.fractionLength(0...1))) + "×"
+                return PaletteItem(id: "speed-\(factor)", title: name, action: .each(label: String(localized: "Speed \(name)"), sizes: false) {
                     try FileOps.changeSpeed($0, factor: factor)
                 })
             }))
             if playable {
-                items.append(PaletteItem(id: "snapshot", title: "Kare al", symbol: "camera", action: .ui { MediaWindow.show($0[0], mode: .snapshot) }))
+                items.append(PaletteItem(id: "snapshot", title: String(localized: "Grab Frame"), symbol: "camera", action: .ui { MediaWindow.show($0[0], mode: .snapshot) }))
             }
-            items.append(PaletteItem(id: "split", title: "Böl", symbol: "square.split.2x1", children: [2, 3, 4].map { n in
-                PaletteItem(id: "split-\(n)", title: "\(n) parça", action: .each(label: "\(n) parça", sizes: false) {
+            items.append(PaletteItem(id: "split", title: String(localized: "Split"), symbol: "square.split.2x1", children: [2, 3, 4].map { n in
+                PaletteItem(id: "split-\(n)", title: String(localized: "\(n) parts"), action: .each(label: String(localized: "\(n) parts"), sizes: false) {
                     try FileOps.splitVideo($0, parts: n)
                 })
             }))
 
         case .audio where hasFFmpeg:
-            items.append(levels("Sıkıştır", "arrow.down.right.and.arrow.up.left") { try FileOps.compressAudio($0, $1) })
+            items.append(levels(String(localized: "Compress"), "arrow.down.right.and.arrow.up.left") { try FileOps.compressAudio($0, $1) })
             items.append(metadata)
-            items.append(PaletteItem(id: "normalize", title: "Normalize", symbol: "waveform",
-                                  action: .each(label: "Normalize", sizes: false) { try FileOps.normalize($0) }))
+            items.append(PaletteItem(id: "normalize", title: String(localized: "Normalize"), symbol: "waveform",
+                                  action: .each(label: String(localized: "Normalized"), sizes: false) { try FileOps.normalize($0) }))
             if playable {
-                items.append(PaletteItem(id: "trim", title: "Kes", symbol: "scissors", action: .ui { MediaWindow.show($0[0], mode: .trim) }))
+                items.append(PaletteItem(id: "trim", title: String(localized: "Trim"), symbol: "scissors", action: .ui { MediaWindow.show($0[0], mode: .trim) }))
             }
-            items.append(PaletteItem(id: "channels", title: "Kanal", symbol: "speaker.wave.2", children: [
+            items.append(PaletteItem(id: "channels", title: String(localized: "Channels"), symbol: "speaker.wave.2", children: [
                 PaletteItem(id: "mono", title: "Mono", action: .each(label: "Mono", sizes: false) { try FileOps.setChannels($0, 1) }),
                 PaletteItem(id: "stereo", title: "Stereo", action: .each(label: "Stereo", sizes: false) { try FileOps.setChannels($0, 2) }),
             ]))
 
         case .pdf:
-            items.append(PaletteItem(id: "compress", title: "Sıkıştır", symbol: "arrow.down.right.and.arrow.up.left",
-                                  action: .each(label: "Sıkıştırıldı", sizes: true) { try FileOps.compressPDF($0) }))
+            items.append(PaletteItem(id: "compress", title: String(localized: "Compress"), symbol: "arrow.down.right.and.arrow.up.left",
+                                  action: .each(label: String(localized: "Compressed"), sizes: true) { try FileOps.compressPDF($0) }))
             items.append(metadata)
-            items.append(PaletteItem(id: "pdfsplit", title: "Böl", symbol: "square.split.2x1",
-                                  action: .each(label: "Sayfalara bölündü", sizes: false) { try FileOps.splitPDF($0) }))
+            items.append(PaletteItem(id: "pdfsplit", title: String(localized: "Split"), symbol: "square.split.2x1",
+                                  action: .each(label: String(localized: "Split into pages"), sizes: false) { try FileOps.splitPDF($0) }))
             if single {
-                items.append(PaletteItem(id: "organize", title: "Sayfalar", symbol: "square.grid.2x2",
+                items.append(PaletteItem(id: "organize", title: String(localized: "Pages"), symbol: "square.grid.2x2",
                                       action: .ui { PDFOrganizer.show($0[0]) }))
             }
 
         case .archive:
-            items.append(PaletteItem(id: "extract", title: "Aç", symbol: "archivebox",
-                                  action: .each(label: "Arşiv açıldı", sizes: false) { try FileOps.extract($0) }))
+            items.append(PaletteItem(id: "extract", title: String(localized: "Extract"), symbol: "archivebox",
+                                  action: .each(label: String(localized: "Archive extracted"), sizes: false) { try FileOps.extract($0) }))
 
         default:
             break
@@ -168,15 +177,15 @@ enum Menus {
     }
 
     private static var metadata: PaletteItem {
-        PaletteItem(id: "metadata", title: "Metadata sil", symbol: "tag.slash",
-                 action: .each(label: "Metadata silindi", sizes: false) { try FileOps.stripMetadata($0) })
+        PaletteItem(id: "metadata", title: String(localized: "Strip Metadata"), symbol: "tag.slash",
+                 action: .each(label: String(localized: "Metadata stripped"), sizes: false) { try FileOps.stripMetadata($0) })
     }
 
     private static func levels(_ title: String, _ symbol: String, _ run: @escaping (URL, FileOps.Level) throws -> URL) -> PaletteItem {
         PaletteItem(id: "compress", title: title, symbol: symbol, children: [
-            ("Hafif", FileOps.Level.light), ("Orta", .medium), ("Güçlü", .strong),
+            (String(localized: "Light"), FileOps.Level.light), (String(localized: "Medium"), .medium), (String(localized: "Strong"), .strong),
         ].map { name, level in
-            PaletteItem(id: "compress-\(level.rawValue)", title: name, action: .each(label: "Sıkıştırıldı", sizes: true) {
+            PaletteItem(id: "compress-\(level.rawValue)", title: name, action: .each(label: String(localized: "Compressed"), sizes: true) {
                 try run($0, level)
             })
         })
@@ -191,10 +200,10 @@ enum Menus {
     private static func actionItems(_ files: [URL]) -> [PaletteItem] {
         [
             PaletteItem(id: "airdrop", title: "AirDrop", symbol: "antenna.radiowaves.left.and.right", action: .ui(FileActions.airDrop)),
-            PaletteItem(id: "float", title: "Sabitle", symbol: "pin", action: .ui(FileActions.float)),
-            PaletteItem(id: "copy", title: "Kopyala", symbol: "doc.on.doc", action: .ui(FileActions.copy)),
-            PaletteItem(id: "move", title: "Taşı", symbol: "arrow.right.doc.on.clipboard", action: .ui(FileActions.move)),
-            PaletteItem(id: "path", title: "Yolu kopyala", symbol: "doc.text", action: .ui(FileActions.copyPath)),
+            PaletteItem(id: "float", title: String(localized: "Pin"), symbol: "pin", action: .ui(FileActions.float)),
+            PaletteItem(id: "copy", title: String(localized: "Copy"), symbol: "doc.on.doc", action: .ui(FileActions.copy)),
+            PaletteItem(id: "move", title: String(localized: "Move"), symbol: "arrow.right.doc.on.clipboard", action: .ui(FileActions.move)),
+            PaletteItem(id: "path", title: String(localized: "Copy Path"), symbol: "doc.text", action: .ui(FileActions.copyPath)),
             PaletteItem(id: "terminal", title: "Terminal", symbol: "apple.terminal", action: .ui(FileActions.terminal)),
         ]
     }

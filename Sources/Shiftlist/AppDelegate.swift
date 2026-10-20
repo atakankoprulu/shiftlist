@@ -51,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // A menu bar app has no windows; don't let macOS quietly quit it when idle.
-        ProcessInfo.processInfo.disableAutomaticTermination("Shiftlist menü çubuğunda çalışır")
+        ProcessInfo.processInfo.disableAutomaticTermination("Shiftlist lives in the menu bar")
         UserDefaults.standard.register(defaults: ["enabled": true, "usePages": true])
         setupStatusItem()
         Notifier.shared.setup()
@@ -69,7 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             trustTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
                 guard let self, self.shiftTap.start() else { return }
                 timer.invalidate()
-                Notifier.shared.post(title: "Shiftlist hazır", body: "Finder'da bir dosya seç ve Shift'e bir kez bas.", reveal: [])
+                Notifier.shared.post(title: String(localized: "Shiftlist is ready"),
+                                     body: String(localized: "Select a file in Finder and tap Shift once."), reveal: [])
             }
         }
 
@@ -92,8 +93,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let files = FinderSelection.current()
         log.notice("finder selection: \(files.count) files, error: \(FinderSelection.lastErrorCode ?? 0)")
         if FinderSelection.lastErrorCode == FinderSelection.notPermitted {
-            Notifier.shared.post(title: "Finder izni gerekli",
-                                 body: "Sistem Ayarları › Gizlilik ve Güvenlik › Otomasyon'da Shiftlist için Finder'ı aç.",
+            Notifier.shared.post(title: String(localized: "Finder access needed"),
+                                 body: String(localized: "Allow Finder for Shiftlist in System Settings › Privacy & Security › Automation."),
                                  reveal: [])
             return
         }
@@ -142,7 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let header = NSMenuItem(title: "Shiftlist", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
-        for hint in ["Finder'da dosya seç, Shift'e bir kez bas", "⇧ Dönüştür  ·  ⌃ Araçlar  ·  ⌘ İşlemler"] {
+        for hint in [String(localized: "Select files in Finder, tap Shift once"), String(localized: "⇧ Convert  ·  ⌃ Tools  ·  ⌘ Actions")] {
             let item = NSMenuItem(title: hint, action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
@@ -152,20 +153,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         jobsItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         jobsItem.isEnabled = false
         menu.addItem(jobsItem)
-        menu.addItem(withTitle: "Seçili Dosyalar İçin Aç", action: #selector(openForSelection), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Open for Selected Files"), action: #selector(openForSelection), keyEquivalent: "").target = self
         menu.addItem(.separator())
 
-        enabledItem = menu.addItem(withTitle: "Shift ile Aç", action: #selector(toggleEnabled), keyEquivalent: "")
+        enabledItem = menu.addItem(withTitle: String(localized: "Open with Shift"), action: #selector(toggleEnabled), keyEquivalent: "")
         enabledItem.target = self
-        pagesItem = menu.addItem(withTitle: "Word → PDF için Pages Kullan", action: #selector(togglePages), keyEquivalent: "")
+        pagesItem = menu.addItem(withTitle: String(localized: "Use Pages for Word → PDF"), action: #selector(togglePages), keyEquivalent: "")
         pagesItem.target = self
-        loginItem = menu.addItem(withTitle: "Girişte Başlat", action: #selector(toggleLogin), keyEquivalent: "")
+        loginItem = menu.addItem(withTitle: String(localized: "Launch at Login"), action: #selector(toggleLogin), keyEquivalent: "")
         loginItem.target = self
-        accessibilityItem = menu.addItem(withTitle: "Erişilebilirlik İzni Ver…", action: #selector(openAccessibilitySettings), keyEquivalent: "")
+        accessibilityItem = menu.addItem(withTitle: String(localized: "Grant Accessibility Access…"), action: #selector(openAccessibilitySettings), keyEquivalent: "")
         accessibilityItem.target = self
-        menu.addItem(withTitle: "Otomasyon İzinleri…", action: #selector(openAutomationSettings), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Automation Permissions…"), action: #selector(openAutomationSettings), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Çıkış", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: String(localized: "Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         statusItem.menu = menu
         updateStatusButton()
@@ -173,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         let active = JobRunner.shared.active
-        jobsItem.title = active == 0 ? "Sürmekte olan iş yok" : "\(active) iş sürüyor…"
+        jobsItem.title = active == 0 ? String(localized: "No jobs running") : String(localized: "\(active) jobs running…")
         enabledItem.state = UserDefaults.standard.bool(forKey: "enabled") ? .on : .off
         pagesItem.state = UserDefaults.standard.bool(forKey: "usePages") ? .on : .off
         pagesItem.isHidden = !Tools.pagesInstalled
@@ -210,7 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 try SMAppService.mainApp.register()
             }
         } catch {
-            Notifier.shared.post(title: "Girişte başlatma ayarlanamadı", body: error.localizedDescription, reveal: [])
+            Notifier.shared.post(title: String(localized: "Couldn’t set launch at login"), body: error.localizedDescription, reveal: [])
         }
     }
 

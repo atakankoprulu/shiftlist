@@ -44,8 +44,10 @@ func render(scale: CGFloat) -> Data {
     }
 
     text("Shiftlist", y: 34, size: 26, weight: .bold, color: NSColor(red: 0.12, green: 0.16, blue: 0.32, alpha: 1))
-    text("Kurmak için Shiftlist'i Uygulamalar klasörüne sürükle", y: 74, size: 13.5, weight: .medium,
+    text("Drag Shiftlist to Applications to install", y: 72, size: 13.5, weight: .medium,
          color: NSColor(red: 0.30, green: 0.35, blue: 0.50, alpha: 1))
+    text("Kurmak için Shiftlist'i Uygulamalar klasörüne sürükle", y: 94, size: 11.5, weight: .regular,
+         color: NSColor(red: 0.30, green: 0.35, blue: 0.50, alpha: 0.75))
 
     // Curved arrow from the app to Applications.
     let blue = NSColor(red: 0.27, green: 0.45, blue: 1.0, alpha: 0.9)
@@ -66,12 +68,14 @@ func render(scale: CGFloat) -> Data {
     blue.setFill()
     head.fill()
 
-    text("İlk açılışta macOS uyarı verirse: Sistem Ayarları › Gizlilik ve Güvenlik › “Yine de Aç”", y: 304, size: 11,
+    text("If macOS warns on first launch: System Settings › Privacy & Security › “Open Anyway”", y: 290, size: 11,
+         weight: .regular, color: NSColor(red: 0.30, green: 0.35, blue: 0.50, alpha: 0.8))
+    text("İlk açılışta macOS uyarı verirse: Sistem Ayarları › Gizlilik ve Güvenlik › “Yine de Aç”", y: 307, size: 11,
          weight: .regular, color: NSColor(red: 0.30, green: 0.35, blue: 0.50, alpha: 0.8))
 
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
 
-try render(scale: 1).write(to: outDir.appendingPathComponent("arkaplan.png"))
-try render(scale: 2).write(to: outDir.appendingPathComponent("arkaplan@2x.png"))
+try render(scale: 1).write(to: outDir.appendingPathComponent("background.png"))
+try render(scale: 2).write(to: outDir.appendingPathComponent("background@2x.png"))

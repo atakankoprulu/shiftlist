@@ -25,7 +25,7 @@ func findItem(_ id: String, in items: [PaletteItem]) -> PaletteItem? {
 
 func printResult(_ result: JobResult) -> Never {
     result.outputs.forEach { print("✓ \($0.path)") }
-    result.skipped.forEach { print("= \($0.lastPathComponent) atlandı") }
+    result.skipped.forEach { print("= \($0.lastPathComponent) skipped") }
     result.failures.forEach { print("✗ \($0.file.lastPathComponent): \($0.message)") }
     exit(result.failures.isEmpty ? 0 : 1)
 }
@@ -49,7 +49,7 @@ case "--tool" where args.count >= 3:
     let files = fileURLs(args.dropFirst(2))
     guard let item = findItem(args[1], in: Menus.items(for: files, mode: .tools)),
           case .each(_, _, let operation) = item.action else {
-        print("Araç bulunamadı: \(args[1])")
+        print("Tool not found: \(args[1])")
         exit(2)
     }
     app.setActivationPolicy(.prohibited)

@@ -25,6 +25,7 @@ Finder'da bir ya da birkaç dosya seç, Shift'e bir kez bas ve bırak. Liste iml
   ⌘ Command   İşlemler   — AirDrop, sabitle, kopyala, taşı, yolu kopyala, Terminal
 Esc kapatır. 1–9 tuşlarıyla da seçebilirsin. Yeni dosya her zaman orijinalin yanına kaydedilir; orijinale dokunulmaz.
 Menü çubuğundaki Shiftlist simgesinden ayarlara ve "Girişte Başlat"a ulaşabilirsin.
+Arayüz, sistem diline göre Türkçe ya da İngilizce açılır.
 
 NOTLAR
 • Markdown ve EPUB dönüştürme için pandoc gerekir (Homebrew: brew install pandoc). Kurulu değilse bu seçenekler görünmez.

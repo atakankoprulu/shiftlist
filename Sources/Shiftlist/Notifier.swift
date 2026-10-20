@@ -10,16 +10,16 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    /// `label` is the format ("JPG") or the tool ("Sıkıştırıldı"); `sizes` appends "4,2 MB → 1,1 MB".
+    /// `label` is the format ("JPG") or the tool ("Compressed"); `sizes` appends "4.2 MB → 1.1 MB".
     func report(_ result: JobResult, files: [URL], label: String, sizes: Bool = false) {
         if let failure = result.failures.first {
-            let title = result.failures.count == 1 ? "Yapılamadı" : "\(result.failures.count) dosyada hata"
+            let title = result.failures.count == 1 ? String(localized: "Failed") : String(localized: "Errors in \(result.failures.count) files")
             post(title: title, body: "\(failure.file.lastPathComponent): \(failure.message)", reveal: result.outputs)
             return
         }
         guard let first = result.outputs.first else {
             if !result.skipped.isEmpty {
-                post(title: "Değişiklik yok", body: "Seçili dosyalar zaten \(label) formatında.", reveal: [])
+                post(title: String(localized: "No changes"), body: String(localized: "The selected files are already \(label)."), reveal: [])
             }
             return
         }
@@ -28,17 +28,17 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             let src = files.first { !result.skipped.contains($0) } ?? files[0]
             body = "\(src.lastPathComponent) → \(first.lastPathComponent)"
         } else if result.outputs.count == 1 {
-            body = "\(files.count) dosya → \(first.lastPathComponent)"
+            body = String(localized: "\(files.count) files → \(first.lastPathComponent)")
         } else {
-            body = "\(result.outputs.count) dosya → \(label)"
+            body = String(localized: "\(result.outputs.count) files → \(label)")
         }
         if sizes {
             let before = files.map(Self.size).reduce(0, +), after = result.outputs.map(Self.size).reduce(0, +)
             let fmt = ByteCountFormatter()
             body += "\n\(fmt.string(fromByteCount: before)) → \(fmt.string(fromByteCount: after))"
-            if after >= before { body += " (daha küçük olmadı)" }
+            if after >= before { body += String(localized: " (not smaller)") }
         }
-        post(title: result.outputs.count == 1 && !sizes ? "Hazır ✓" : "\(label) ✓", body: body, reveal: result.outputs)
+        post(title: result.outputs.count == 1 && !sizes ? String(localized: "Done ✓") : "\(label) ✓", body: body, reveal: result.outputs)
     }
 
     private static func size(_ url: URL) -> Int64 {

@@ -6,13 +6,13 @@ Select files in Finder, tap **Shift** once, and a small list opens under your cu
 
 | Key | Tab | What's inside |
 | --- | --- | --- |
-| ⇧ Shift | Dönüştür (Convert) | JPG, PNG, HEIC, AVIF, PDF, MP4, MP3, DOCX, ZIP… |
-| ⌃ Control | Araçlar (Tools) | compress, strip metadata, crop, redact, trim, speed, split… |
-| ⌘ Command | İşlemler (Actions) | AirDrop, pin on screen, copy, move, copy path, Terminal |
+| ⇧ Shift | Convert | JPG, PNG, HEIC, AVIF, PDF, MP4, MP3, DOCX, ZIP… |
+| ⌃ Control | Tools | compress, strip metadata, crop, redact, trim, speed, split… |
+| ⌘ Command | Actions | AirDrop, pin on screen, copy, move, copy path, Terminal |
 
 Pick with the mouse, the arrow keys, or 1–9. Esc closes. New files are always written next to the original; the original is never touched.
 
-> The interface is in Turkish.
+The interface is in English and Turkish and follows your system language.
 
 ## Requirements
 

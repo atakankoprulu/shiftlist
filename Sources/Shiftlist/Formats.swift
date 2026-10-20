@@ -76,7 +76,7 @@ struct Target: Hashable, Identifiable {
     }
     var label: String {
         switch id {
-        case Target.mergeID: return "BİRLEŞTİR"
+        case Target.mergeID: return String(localized: "Merge")
         case "tgz": return "GZIP"
         default: return id.uppercased()
         }

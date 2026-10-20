@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 
 struct ConvertError: LocalizedError {
     let message: String
-    init(_ message: String) { self.message = message }
+    init(_ message: String.LocalizationValue) { self.message = String(localized: message) }
+    init(verbatim message: String) { self.message = message }
     var errorDescription: String? { message }
 }
 
@@ -33,7 +34,7 @@ final class ConversionJob {
 
         if target.isMerge {
             do {
-                let dst = uniqueURL(in: files[0].deletingLastPathComponent(), base: "Birleştirilmiş", ext: "pdf")
+                let dst = uniqueURL(in: files[0].deletingLastPathComponent(), base: String(localized: "Merged"), ext: "pdf")
                 try mergeToPDF(files, dst)
                 result.outputs.append(dst)
             } catch {
@@ -59,7 +60,7 @@ final class ConversionJob {
     // MARK: - Dispatch
 
     private func convert(_ src: URL, to ext: String) throws -> URL {
-        guard let kind = Kind.of(src) else { throw ConvertError("Desteklenmeyen dosya türü") }
+        guard let kind = Kind.of(src) else { throw ConvertError("Unsupported file type") }
         if kind == .pdf { return try convertPDF(src, to: ext) }
 
         let dst = uniqueURL(in: src.deletingLastPathComponent(), base: baseName(src), ext: ext)
@@ -77,7 +78,7 @@ final class ConversionJob {
             try? FileManager.default.removeItem(at: dst)
             throw error
         }
-        guard FileManager.default.fileExists(atPath: dst.path) else { throw ConvertError("Çıktı dosyası oluşmadı") }
+        guard FileManager.default.fileExists(atPath: dst.path) else { throw ConvertError("No output file was created") }
         return dst
     }
 
@@ -87,13 +88,13 @@ final class ConversionJob {
         if ext == "pdf" { return try mergeToPDF([src], dst) }
 
         guard let source = CGImageSourceCreateWithURL(src as CFURL, nil), CGImageSourceGetCount(source) > 0 else {
-            throw ConvertError("Görsel okunamadı")
+            throw ConvertError("Couldn’t read the image")
         }
         let type = Self.imageType(for: ext)
         let animated = ext == "gif" && CGImageSourceGetCount(source) > 1
         let frames = animated ? CGImageSourceGetCount(source) : 1
         guard let dest = CGImageDestinationCreateWithURL(dst as CFURL, type as CFString, frames, nil) else {
-            throw ConvertError("\(ext.uppercased()) yazılamıyor")
+            throw ConvertError("Can’t write \(ext.uppercased())")
         }
 
         if animated {
@@ -101,7 +102,7 @@ final class ConversionJob {
             for i in 0..<frames { CGImageDestinationAddImageFromSource(dest, source, i, nil) }
         } else {
             let index = Self.bestIndex(source)
-            guard var image = Self.orientedImage(source, index: index) else { throw ConvertError("Görsel okunamadı") }
+            guard var image = Self.orientedImage(source, index: index) else { throw ConvertError("Couldn’t read the image") }
             if ext == "jpg" || ext == "bmp" { image = try Self.flattened(image) }
 
             var props: [CFString: Any] = [
@@ -115,7 +116,7 @@ final class ConversionJob {
             }
             CGImageDestinationAddImage(dest, image, props as CFDictionary)
         }
-        guard CGImageDestinationFinalize(dest) else { throw ConvertError("\(ext.uppercased()) kaydedilemedi") }
+        guard CGImageDestinationFinalize(dest) else { throw ConvertError("Couldn’t save \(ext.uppercased())") }
     }
 
     static func imageType(for ext: String) -> String {
@@ -172,13 +173,13 @@ final class ConversionJob {
         let space = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
         guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else {
-            throw ConvertError("Görsel işlenemedi")
+            throw ConvertError("Couldn’t process the image")
         }
         let rect = CGRect(x: 0, y: 0, width: image.width, height: image.height)
         ctx.setFillColor(.white)
         ctx.fill(rect)
         ctx.draw(image, in: rect)
-        guard let out = ctx.makeImage() else { throw ConvertError("Görsel işlenemedi") }
+        guard let out = ctx.makeImage() else { throw ConvertError("Couldn’t process the image") }
         return out
     }
 
@@ -187,33 +188,33 @@ final class ConversionJob {
         let doc = PDFDocument()
         for file in files {
             if Kind.of(file) == .pdf {
-                guard let src = PDFDocument(url: file) else { throw ConvertError("\(file.lastPathComponent) açılamadı") }
-                if src.isLocked { throw ConvertError("\(file.lastPathComponent) şifreli") }
+                guard let src = PDFDocument(url: file) else { throw ConvertError("Couldn’t open \(file.lastPathComponent)") }
+                if src.isLocked { throw ConvertError("\(file.lastPathComponent) is encrypted") }
                 for i in 0..<src.pageCount {
                     if let page = src.page(at: i)?.copy() as? PDFPage { doc.insert(page, at: doc.pageCount) }
                 }
             } else {
                 guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
                       let image = Self.orientedImage(source, index: Self.bestIndex(source)) else {
-                    throw ConvertError("\(file.lastPathComponent) okunamadı")
+                    throw ConvertError("Couldn’t read \(file.lastPathComponent)")
                 }
                 let meta = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
                 let dpi = max(meta?[kCGImagePropertyDPIWidth] as? Double ?? 72, 72)
                 let size = NSSize(width: Double(image.width) * 72 / dpi, height: Double(image.height) * 72 / dpi)
                 guard let page = PDFPage(image: NSImage(cgImage: image, size: size)) else {
-                    throw ConvertError("\(file.lastPathComponent) PDF'e eklenemedi")
+                    throw ConvertError("Couldn’t add \(file.lastPathComponent) to the PDF")
                 }
                 doc.insert(page, at: doc.pageCount)
             }
         }
-        guard doc.pageCount > 0, doc.write(to: dst) else { throw ConvertError("PDF yazılamadı") }
+        guard doc.pageCount > 0, doc.write(to: dst) else { throw ConvertError("Couldn’t write the PDF") }
     }
 
     // MARK: - PDF
 
     private func convertPDF(_ src: URL, to ext: String) throws -> URL {
-        guard let doc = PDFDocument(url: src) else { throw ConvertError("PDF açılamadı") }
-        if doc.isLocked { throw ConvertError("PDF şifreli") }
+        guard let doc = PDFDocument(url: src) else { throw ConvertError("Couldn’t open the PDF") }
+        if doc.isLocked { throw ConvertError("The PDF is encrypted") }
         let dir = src.deletingLastPathComponent()
         let base = src.deletingPathExtension().lastPathComponent
 
@@ -221,7 +222,7 @@ final class ConversionJob {
             let dst = uniqueURL(in: dir, base: base, ext: "txt")
             let text = doc.string ?? ""
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                throw ConvertError("PDF'te metin yok (taranmış belge olabilir)")
+                throw ConvertError("The PDF has no text (it may be a scanned document)")
             }
             try text.write(to: dst, atomically: true, encoding: .utf8)
             return dst
@@ -234,7 +235,7 @@ final class ConversionJob {
         }
 
         // Multi-page PDFs get a folder of numbered page images.
-        let folder = uniqueURL(in: dir, base: "\(base) (sayfalar)", ext: nil)
+        let folder = uniqueURL(in: dir, base: "\(base) (\(String(localized: "pages")))", ext: nil)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
         let digits = String(doc.pageCount).count
         for i in 0..<doc.pageCount {
@@ -246,7 +247,7 @@ final class ConversionJob {
     }
 
     private func renderPage(_ page: PDFPage, to dst: URL, ext: String) throws {
-        guard let cgPage = page.pageRef else { throw ConvertError("Sayfa okunamadı") }
+        guard let cgPage = page.pageRef else { throw ConvertError("Couldn’t read the page") }
         let scale: CGFloat = 2 // 144 dpi
         let box = cgPage.getBoxRect(.mediaBox)
         let rotated = abs(cgPage.rotationAngle) % 180 == 90
@@ -256,7 +257,7 @@ final class ConversionJob {
         guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                   bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else {
-            throw ConvertError("Sayfa çizilemedi")
+            throw ConvertError("Couldn’t draw the page")
         }
         ctx.setFillColor(.white)
         ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
@@ -266,10 +267,10 @@ final class ConversionJob {
 
         guard let image = ctx.makeImage(),
               let dest = CGImageDestinationCreateWithURL(dst as CFURL, Self.imageType(for: ext) as CFString, 1, nil) else {
-            throw ConvertError("Sayfa kaydedilemedi")
+            throw ConvertError("Couldn’t save the page")
         }
         CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
-        guard CGImageDestinationFinalize(dest) else { throw ConvertError("Sayfa kaydedilemedi") }
+        guard CGImageDestinationFinalize(dest) else { throw ConvertError("Couldn’t save the page") }
     }
 
     // MARK: - Video & audio
@@ -300,7 +301,7 @@ final class ConversionJob {
         case "ogg", "oga": return ["-vn", "-c:a", "vorbis", "-strict", "-2", "-ac", "2", "-q:a", "6"] + af
         case "opus": return ["-vn", "-c:a", "libopus", "-b:a", "128k"] + af
         case "aiff": return ["-vn", "-c:a", "pcm_s16be"] + af
-        default: throw ConvertError("\(ext.uppercased()) desteklenmiyor")
+        default: throw ConvertError("\(ext.uppercased()) isn’t supported")
         }
     }
 
@@ -333,7 +334,7 @@ final class ConversionJob {
     }
 
     private func convertWithPandoc(_ src: URL, _ dst: URL, _ ext: String) throws {
-        guard let pandoc = Tools.pandoc else { throw ConvertError("pandoc bulunamadı (brew install pandoc)") }
+        guard let pandoc = Tools.pandoc else { throw ConvertError("pandoc not found (brew install pandoc)") }
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("shiftlist-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmp) }
@@ -362,7 +363,7 @@ final class ConversionJob {
             try runTool(pandoc, base + ["-t", "plain", "--wrap=none", "-o", dst.path])
         case "md":
             let media = dst.deletingLastPathComponent()
-                .appendingPathComponent(dst.deletingPathExtension().lastPathComponent + " (görseller)")
+                .appendingPathComponent(dst.deletingPathExtension().lastPathComponent + " (\(String(localized: "images")))")
             try runTool(pandoc, base + ["-t", "gfm", "--wrap=none", "--extract-media=\(media.path)", "-o", dst.path])
         case "html":
             try runTool(pandoc, base + ["-s", "--embed-resources", "-o", dst.path])
@@ -416,7 +417,7 @@ final class ConversionJob {
             op.showsProgressPanel = false
             return op.run()
         }
-        guard ok else { throw ConvertError("PDF oluşturulamadı") }
+        guard ok else { throw ConvertError("Couldn’t create the PDF") }
     }
 
     // MARK: - Pages
@@ -436,7 +437,7 @@ final class ConversionJob {
         case "docx": format = "Word"
         case "txt": format = "TXT"
         case "epub": format = "EPUB"
-        default: throw ConvertError("Pages \(ext.uppercased()) dışa aktaramıyor")
+        default: throw ConvertError("Pages can’t export \(ext.uppercased())")
         }
         pagesTouched = true
         let script = """
@@ -509,21 +510,22 @@ func runTool(_ path: String, _ args: [String], timeout: TimeInterval? = nil) thr
     try process.run()
     if finished.wait(timeout: timeout.map { .now() + $0 } ?? .distantFuture) == .timedOut {
         process.terminate()
-        throw ConvertError("Zaman aşımı")
+        throw ConvertError("Timed out")
     }
     reader.wait()
 
     guard process.terminationStatus == 0 else {
         let text = String(decoding: output, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         let lastLine = text.split(separator: "\n").last.map(String.init) ?? ""
-        throw ConvertError(lastLine.isEmpty ? "\(URL(fileURLWithPath: path).lastPathComponent) hata verdi" : String(lastLine.prefix(200)))
+        throw lastLine.isEmpty ? ConvertError("\(URL(fileURLWithPath: path).lastPathComponent) failed")
+                               : ConvertError(verbatim: String(lastLine.prefix(200)))
     }
 }
 
 // MARK: - Shared tool runners
 
 func runFFmpeg(_ args: [String], output: URL) throws {
-    guard let ffmpeg = Tools.ffmpeg else { throw ConvertError("ffmpeg bulunamadı (brew install ffmpeg)") }
+    guard let ffmpeg = Tools.ffmpeg else { throw ConvertError("ffmpeg not found (brew install ffmpeg)") }
     try runTool(ffmpeg, ["-hide_banner", "-nostdin", "-loglevel", "error", "-y"] + args + [output.path])
 }
 
@@ -538,7 +540,7 @@ func extractArchive(_ src: URL, into dir: URL) throws {
 
 func packArchive(contentsOf dir: URL, to dst: URL, ext: String) throws {
     let names = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0 != "__MACOSX" && $0 != ".DS_Store" }
-    guard !names.isEmpty else { throw ConvertError("Arşiv boş") }
+    guard !names.isEmpty else { throw ConvertError("The archive is empty") }
     switch ext {
     case "zip":
         if names.count == 1 {

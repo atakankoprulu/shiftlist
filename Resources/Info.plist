@@ -3,7 +3,12 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>tr</string>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>tr</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>Shiftlist</string>
     <key>CFBundleIconFile</key>
@@ -17,9 +22,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.2.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -27,6 +32,6 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Shiftlist, Finder'da seçtiğin dosyaları görmek ve Word belgelerini Pages ile PDF'e aktarmak için izin ister.</string>
+    <string>Shiftlist needs this to see the files you select in Finder and to export Word documents to PDF with Pages.</string>
 </dict>
 </plist>

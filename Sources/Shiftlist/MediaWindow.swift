@@ -15,7 +15,7 @@ enum MediaWindow {
         let isAudio = Kind.of(url) == .audio
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 820, height: isAudio ? 200 : 540),
                               styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "\(url.lastPathComponent) — \(mode == .trim ? "Kes" : "Kare Al")"
+        window.title = "\(url.lastPathComponent) — \(mode == .trim ? String(localized: "Trim") : String(localized: "Grab Frame"))"
         window.isReleasedWhenClosed = false
 
         switch mode {
@@ -36,13 +36,13 @@ enum MediaWindow {
                 let start = item.reversePlaybackEndTime.isValid ? item.reversePlaybackEndTime.seconds : 0
                 let end = item.forwardPlaybackEndTime.isValid ? item.forwardPlaybackEndTime.seconds : item.duration.seconds
                 guard end > start else { return }
-                JobRunner.shared.run(files: [url], label: "Kesildi", sizes: false) {
+                JobRunner.shared.run(files: [url], label: String(localized: "Trimmed"), sizes: false) {
                     try FileOps.trim(url, start: start, end: end)
                 }
             }
 
         case .snapshot:
-            let button = NSButton(title: "Bu Kareyi Kaydet", target: nil, action: nil)
+            let button = NSButton(title: String(localized: "Save This Frame"), target: nil, action: nil)
             button.bezelStyle = .rounded
             button.keyEquivalent = "\r"
             let saver = SnapshotSaver(url: url, player: player)
@@ -82,16 +82,16 @@ private final class SnapshotSaver: NSObject {
         generator.generateCGImageAsynchronously(for: time) { image, _, error in
             DispatchQueue.main.async {
                 guard let image else {
-                    Notifier.shared.post(title: "Kare alınamadı", body: error?.localizedDescription ?? "", reveal: [])
+                    Notifier.shared.post(title: String(localized: "Couldn’t grab the frame"), body: error?.localizedDescription ?? "", reveal: [])
                     return
                 }
                 let seconds = Int(time.seconds)
-                let dst = FileOps.output(url, String(format: "kare %02d.%02d", seconds / 60, seconds % 60), ext: "png")
+                let dst = FileOps.output(url, String(format: String(localized: "frame %02d.%02d"), seconds / 60, seconds % 60), ext: "png")
                 do {
                     try FileOps.writeImage(image, to: dst, ext: "png", quality: 1, metadataFrom: nil)
-                    Notifier.shared.post(title: "Kare kaydedildi", body: dst.lastPathComponent, reveal: [dst])
+                    Notifier.shared.post(title: String(localized: "Frame saved"), body: dst.lastPathComponent, reveal: [dst])
                 } catch {
-                    Notifier.shared.post(title: "Kare kaydedilemedi", body: error.localizedDescription, reveal: [])
+                    Notifier.shared.post(title: String(localized: "Couldn’t save the frame"), body: error.localizedDescription, reveal: [])
                 }
             }
         }

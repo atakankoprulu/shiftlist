@@ -10,6 +10,7 @@ rm -rf "$APP"
 mkdir -p build.nosync "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build.nosync/arm64-apple-macosx/release/Shiftlist "$APP/Contents/MacOS/"
 cp Resources/Info.plist "$APP/Contents/"
+cp -R Resources/*.lproj "$APP/Contents/Resources/"
 [ -f build.nosync/AppIcon.icns ] || swift scripts/make-icon.swift build.nosync/AppIcon.icns
 cp build.nosync/AppIcon.icns "$APP/Contents/Resources/"
 # A stable identity keeps macOS privacy permissions across rebuilds (see scripts/make-signing-cert.sh);

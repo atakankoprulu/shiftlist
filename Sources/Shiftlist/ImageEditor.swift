@@ -3,8 +3,17 @@ import CoreImage
 import SwiftUI
 
 enum EditTool: String, CaseIterable, Identifiable {
-    case adjust = "Ayarla", crop = "Kırp", annotate = "Çiz", redact = "Karart"
+    case adjust, crop, annotate, redact
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .adjust: return String(localized: "Adjust")
+        case .crop: return String(localized: "Crop")
+        case .annotate: return String(localized: "Draw")
+        case .redact: return String(localized: "Redact")
+        }
+    }
     var symbol: String {
         switch self {
         case .adjust: return "slider.horizontal.3"
@@ -102,7 +111,7 @@ final class ImageEditorModel: ObservableObject {
         let w = CGFloat(base.width), h = CGFloat(base.height)
         guard let ctx = CGContext(data: nil, width: base.width, height: base.height, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-            throw ConvertError("Görsel işlenemedi")
+            throw ConvertError("Couldn’t process the image")
         }
         ctx.draw(base, in: CGRect(x: 0, y: 0, width: w, height: h))
 
@@ -135,7 +144,7 @@ final class ImageEditorModel: ObservableObject {
             ctx.strokePath()
         }
 
-        guard var out = ctx.makeImage() else { throw ConvertError("Görsel işlenemedi") }
+        guard var out = ctx.makeImage() else { throw ConvertError("Couldn’t process the image") }
         if let crop, crop.width > 0.01, crop.height > 0.01 {
             let rect = CGRect(x: crop.minX * w, y: crop.minY * h, width: crop.width * w, height: crop.height * h).integral
             out = out.cropping(to: rect) ?? out
@@ -147,7 +156,7 @@ final class ImageEditorModel: ObservableObject {
         let image = try render()
         let format = fileFormat(url)
         let ext = ["jpg", "png", "heic", "tiff", "avif", "bmp"].contains(format) ? format : "png"
-        let dst = FileOps.output(url, "düzenlendi", ext: ext)
+        let dst = FileOps.output(url, String(localized: "edited"), ext: ext)
         try FileOps.writeImage(image, to: dst, ext: ext, quality: 0.92,
                                metadataFrom: CGImageSourceCreateWithURL(url as CFURL, nil))
         return dst
@@ -187,7 +196,7 @@ struct ImageEditorView: View {
         HStack(spacing: 12) {
             Picker("", selection: $model.tool) {
                 ForEach(EditTool.allCases) { tool in
-                    Label(tool.rawValue, systemImage: tool.symbol).tag(tool)
+                    Label(tool.title, systemImage: tool.symbol).tag(tool)
                 }
             }
             .pickerStyle(.segmented)
@@ -195,14 +204,14 @@ struct ImageEditorView: View {
             .frame(width: 360)
 
             Spacer()
-            Button { model.undo() } label: { Label("Geri Al", systemImage: "arrow.uturn.backward") }
+            Button { model.undo() } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!model.canUndo)
-            Button("Vazgeç") { onDone(nil) }
+            Button("Cancel") { onDone(nil) }
                 .keyboardShortcut(.cancelAction)
-            Button("Kaydet") {
+            Button("Save") {
                 do { onDone(try model.save()) } catch {
-                    Notifier.shared.post(title: "Kaydedilemedi", body: error.localizedDescription, reveal: [])
+                    Notifier.shared.post(title: String(localized: "Couldn’t save"), body: error.localizedDescription, reveal: [])
                 }
             }
             .keyboardShortcut("s", modifiers: .command)
@@ -218,19 +227,19 @@ struct ImageEditorView: View {
         switch model.tool {
         case .adjust:
             HStack(spacing: 18) {
-                slider("Parlaklık", $model.brightness, -0.4...0.4)
-                slider("Kontrast", $model.contrast, 0.6...1.6)
-                slider("Doygunluk", $model.saturation, 0...2)
-                slider("Sıcaklık", $model.warmth, -1...1)
-                Button("Sıfırla") {
+                slider("Brightness", $model.brightness, -0.4...0.4)
+                slider("Contrast", $model.contrast, 0.6...1.6)
+                slider("Saturation", $model.saturation, 0...2)
+                slider("Warmth", $model.warmth, -1...1)
+                Button("Reset") {
                     model.brightness = 0; model.contrast = 1; model.saturation = 1; model.warmth = 0
                 }
             }
         case .crop:
             HStack {
-                Text("Kırpmak istediğin alanı sürükleyerek seç.").foregroundStyle(.secondary)
+                Text("Drag to select the area to crop.").foregroundStyle(.secondary)
                 Spacer()
-                Button("Kırpmayı Kaldır") { model.setCrop(nil) }.disabled(model.crop == nil)
+                Button("Remove Crop") { model.setCrop(nil) }.disabled(model.crop == nil)
             }
         case .annotate:
             HStack(spacing: 10) {
@@ -242,24 +251,24 @@ struct ImageEditorView: View {
                         .onTapGesture { model.penColor = color }
                 }
                 Divider().frame(height: 24)
-                slider("Kalınlık", Binding(get: { Double(model.penWidth) }, set: { model.penWidth = CGFloat($0) }), 0.002...0.03)
+                slider("Thickness", Binding(get: { Double(model.penWidth) }, set: { model.penWidth = CGFloat($0) }), 0.002...0.03)
             }
         case .redact:
             HStack {
                 Picker("", selection: $model.pixelate) {
-                    Text("Siyah kutu").tag(false)
-                    Text("Pikselleştir").tag(true)
+                    Text("Black box").tag(false)
+                    Text("Pixelate").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 220)
-                Text("Gizlemek istediğin alanı sürükle.").foregroundStyle(.secondary)
+                Text("Drag over the area to hide.").foregroundStyle(.secondary)
                 Spacer()
             }
         }
     }
 
-    private func slider(_ title: String, _ value: Binding<Double>, _ range: ClosedRange<Double>) -> some View {
+    private func slider(_ title: LocalizedStringKey, _ value: Binding<Double>, _ range: ClosedRange<Double>) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Slider(value: value, in: range).controlSize(.small)
@@ -366,7 +375,7 @@ enum ImageEditor {
 
     static func show(_ url: URL, tool: EditTool) {
         guard let model = ImageEditorModel(url: url, tool: tool) else {
-            Notifier.shared.post(title: "Açılamadı", body: "\(url.lastPathComponent) okunamadı.", reveal: [])
+            Notifier.shared.post(title: String(localized: "Couldn’t open"), body: String(localized: "Couldn’t read \(url.lastPathComponent)."), reveal: [])
             return
         }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 720),
