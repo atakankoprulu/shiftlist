@@ -2,7 +2,7 @@ import AppKit
 
 /// Source file families. Each family knows which formats it can be turned into.
 enum Kind {
-    case image, video, audio, document, markdown, ebook, pdf, pages, archive
+    case image, video, audio, document, markdown, ebook, pdf, pages, archive, subtitle
 
     static func of(_ url: URL) -> Kind? {
         switch fileFormat(url) {
@@ -24,6 +24,8 @@ enum Kind {
             return .pages
         case "zip", "tar", "tgz", "tbz", "txz", "gz", "bz2", "xz", "rar", "7z":
             return .archive
+        case "srt", "vtt":
+            return .subtitle
         default:
             return nil
         }
@@ -40,6 +42,7 @@ func normalizedExt(_ ext: String) -> String {
     case "htm": return "html"
     case "aif": return "aiff"
     case "markdown": return "md"
+    case "webvtt": return "vtt"
     case "text": return "txt"
     default: return e
     }
@@ -132,6 +135,8 @@ enum Catalog {
             return Tools.pagesInstalled ? ["pdf", "docx", "txt", "epub"] : []
         case .archive:
             return ["zip", "tar", "tgz"]
+        case .subtitle:
+            return ["srt", "vtt", "txt"]
         }
     }
 

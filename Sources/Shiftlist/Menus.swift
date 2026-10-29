@@ -33,6 +33,8 @@ enum PaletteAction {
     case convert(Target)
     /// Background work applied to each selected file; `sizes` adds before/after sizes to the notification.
     case each(label: String, sizes: Bool, (URL) throws -> URL)
+    /// Background work that turns the whole selection into one file (collage, joined video).
+    case combine(label: String, ([URL]) throws -> URL)
     /// Runs immediately on the main thread (windows, pasteboard, sharing).
     case ui(([URL]) -> Void)
 }
@@ -108,7 +110,11 @@ enum Menus {
             if single {
                 items.append(editor(String(localized: "Crop"), "crop", .crop, files[0]))
                 items.append(editor(String(localized: "Redact"), "eye.slash", .redact, files[0]))
+            } else {
+                items.append(PaletteItem(id: "collage", title: String(localized: "Collage"), symbol: "rectangle.3.group",
+                                      action: .combine(label: String(localized: "Collage")) { try FileOps.collage($0) }))
             }
+            items.append(readCodes)
 
         case .video where hasFFmpeg:
             items.append(levels(String(localized: "Compress"), "arrow.down.right.and.arrow.up.left") { try FileOps.compressVideo($0, $1) })
@@ -141,6 +147,10 @@ enum Menus {
                     try FileOps.splitVideo($0, parts: n)
                 })
             }))
+            if !single {
+                items.append(PaletteItem(id: "join", title: String(localized: "Join"), symbol: "film.stack",
+                                      action: .combine(label: String(localized: "Joined")) { try FileOps.joinVideos($0) }))
+            }
 
         case .audio where hasFFmpeg:
             items.append(levels(String(localized: "Compress"), "arrow.down.right.and.arrow.up.left") { try FileOps.compressAudio($0, $1) })
@@ -154,6 +164,8 @@ enum Menus {
                 PaletteItem(id: "mono", title: "Mono", action: .each(label: "Mono", sizes: false) { try FileOps.setChannels($0, 1) }),
                 PaletteItem(id: "stereo", title: "Stereo", action: .each(label: "Stereo", sizes: false) { try FileOps.setChannels($0, 2) }),
             ]))
+            items.append(PaletteItem(id: "waveform", title: String(localized: "Waveform Video"), symbol: "waveform.path",
+                                  action: .each(label: String(localized: "Waveform video"), sizes: false) { try FileOps.waveformVideo($0) }))
 
         case .pdf:
             items.append(PaletteItem(id: "compress", title: String(localized: "Compress"), symbol: "arrow.down.right.and.arrow.up.left",
@@ -165,6 +177,7 @@ enum Menus {
                 items.append(PaletteItem(id: "organize", title: String(localized: "Pages"), symbol: "square.grid.2x2",
                                       action: .ui { PDFOrganizer.show($0[0]) }))
             }
+            items.append(readCodes)
 
         case .archive:
             items.append(PaletteItem(id: "extract", title: String(localized: "Extract"), symbol: "archivebox",
@@ -174,6 +187,10 @@ enum Menus {
             break
         }
         return items
+    }
+
+    private static var readCodes: PaletteItem {
+        PaletteItem(id: "qr", title: String(localized: "Read QR Code"), symbol: "qrcode.viewfinder", action: .ui(CodeReader.read))
     }
 
     private static var metadata: PaletteItem {

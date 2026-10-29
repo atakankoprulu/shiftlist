@@ -123,6 +123,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         case .each(let label, let sizes, let operation):
             JobRunner.shared.run(files: files, label: label, sizes: sizes, operation: operation)
+        case .combine(let label, let operation):
+            JobRunner.shared.start(files: files, label: label, sizes: false) {
+                var result = JobResult()
+                do { result.outputs.append(try operation(files)) } catch { result.failures.append((files[0], error.localizedDescription)) }
+                return result
+            }
         case .ui(let run):
             run(files)
         case nil:

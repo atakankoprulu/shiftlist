@@ -72,7 +72,39 @@ enum FileOps {
         return dst
     }
 
-    private static func loadImage(_ src: URL) throws -> (CGImageSource, CGImage) {
+    /// Square cells in a near-square grid; each photo fills its cell and is center-cropped.
+    static func collage(_ files: [URL]) throws -> URL {
+        let images = try files.map { try loadImage($0).1 }
+        let cols = Int(Double(images.count).squareRoot().rounded(.up))
+        let rows = (images.count + cols - 1) / cols
+        let cell = CGFloat(max(600, 2400 / cols)), gap = (cell * 0.02).rounded()
+        let size = CGSize(width: CGFloat(cols) * cell + CGFloat(cols + 1) * gap, height: CGFloat(rows) * cell + CGFloat(rows + 1) * gap)
+        guard let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            throw ConvertError("Couldn’t process the image")
+        }
+        ctx.setFillColor(.white)
+        ctx.fill(CGRect(origin: .zero, size: size))
+        ctx.interpolationQuality = .high
+        for (i, image) in images.enumerated() {
+            // CGContext's origin is bottom-left; fill rows from the top.
+            let x = gap + CGFloat(i % cols) * (cell + gap)
+            let y = size.height - CGFloat(i / cols + 1) * (cell + gap)
+            let rect = CGRect(x: x, y: y, width: cell, height: cell)
+            let scale = max(cell / CGFloat(image.width), cell / CGFloat(image.height))
+            let w = CGFloat(image.width) * scale, h = CGFloat(image.height) * scale
+            ctx.saveGState()
+            ctx.clip(to: rect)
+            ctx.draw(image, in: CGRect(x: rect.midX - w / 2, y: rect.midY - h / 2, width: w, height: h))
+            ctx.restoreGState()
+        }
+        guard let result = ctx.makeImage() else { throw ConvertError("Couldn’t process the image") }
+        let dst = uniqueURL(in: files[0].deletingLastPathComponent(), base: String(localized: "Collage"), ext: "jpg")
+        try writeImage(result, to: dst, ext: "jpg", quality: 0.9, metadataFrom: nil)
+        return dst
+    }
+
+    static func loadImage(_ src: URL) throws -> (CGImageSource, CGImage) {
         guard let source = CGImageSourceCreateWithURL(src as CFURL, nil),
               let image = ConversionJob.orientedImage(source, index: ConversionJob.bestIndex(source)) else {
             throw ConvertError("Couldn’t read the image")
@@ -112,7 +144,9 @@ enum FileOps {
     // MARK: - Metadata
 
     static func stripMetadata(_ src: URL) throws -> URL {
-        let dst = output(src, String(localized: "no metadata"), ext: fileFormat(src) == "tgz" ? "tar.gz" : src.pathExtension.lowercased())
+        // Images in formats ImageIO can read but not write (WebP, PSD, ICO…) come out as PNG.
+        let ext = Kind.of(src) == .image ? strippedImageExt(src) : src.pathExtension.lowercased()
+        let dst = output(src, String(localized: "no metadata"), ext: ext == fileFormat(src) ? src.pathExtension.lowercased() : ext)
         do {
             switch Kind.of(src) {
             case .image: try stripImageMetadata(src, dst)
@@ -129,10 +163,15 @@ enum FileOps {
     }
 
     /// Re-encodes pixels only: EXIF, GPS, XMP and camera data are all left behind.
+    private static func strippedImageExt(_ src: URL) -> String {
+        let ext = fileFormat(src)
+        return ["jpg", "png", "heic", "tiff", "gif", "bmp", "avif"].contains(ext) ? ext : "png"
+    }
+
     private static func stripImageMetadata(_ src: URL, _ dst: URL) throws {
         let (source, image) = try loadImage(src)
         let ext = fileFormat(src)
-        let outExt = ["jpg", "png", "heic", "tiff", "gif", "bmp", "avif"].contains(ext) ? ext : "png"
+        let outExt = strippedImageExt(src)
         if CGImageSourceGetCount(source) > 1 && ext == "gif" {
             guard let dest = CGImageDestinationCreateWithURL(dst as CFURL, ConversionJob.imageType(for: "gif") as CFString,
                                                              CGImageSourceGetCount(source), nil) else { throw ConvertError("Can’t write GIF") }
@@ -235,6 +274,54 @@ enum FileOps {
         return folder
     }
 
+    /// Plays the videos one after another. Everything is fitted (letterboxed) into the first video's frame;
+    /// clips without sound get silence so the audio stays in sync.
+    static func joinVideos(_ files: [URL]) throws -> URL {
+        guard files.count > 1 else { throw ConvertError("Select at least two videos") }
+        let (width, height) = try videoSize(files[0])
+        var inputs: [String] = [], graph: [String] = [], pairs = ""
+        let audio = files.map(hasAudio)
+        let withAudio = audio.contains(true)
+        var silences: [String] = [], silenceCount = 0
+        for (i, file) in files.enumerated() {
+            inputs += ["-i", file.path]
+            graph.append("[\(i):v]scale=\(width):\(height):force_original_aspect_ratio=decrease,pad=\(width):\(height):(ow-iw)/2:(oh-ih)/2,"
+                         + "setsar=1,fps=30,format=yuv420p[v\(i)]")
+            pairs += "[v\(i)]"
+            guard withAudio else { continue }
+            if audio[i] {
+                graph.append("[\(i):a]aformat=sample_rates=48000:channel_layouts=stereo[a\(i)]")
+                pairs += "[a\(i)]"
+            } else {
+                let duration = try mediaDuration(file)
+                silences += ["-f", "lavfi", "-t", String(format: "%.3f", duration), "-i", "anullsrc=r=48000:cl=stereo"]
+                pairs += "[\(files.count + silenceCount):a]"
+                silenceCount += 1
+            }
+        }
+        graph.append(pairs + "concat=n=\(files.count):v=1:a=\(withAudio ? 1 : 0)[v]" + (withAudio ? "[a]" : ""))
+        let dst = output(files[0], String(localized: "joined"), ext: "mp4")
+        try runFFmpeg(inputs + silences + ["-filter_complex", graph.joined(separator: ";"), "-map", "[v]"] + (withAudio ? ["-map", "[a]"] : [])
+                      + ["-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+                         "-movflags", "+faststart"], output: dst)
+        return dst
+    }
+
+    /// Display size, i.e. swapped for phone videos stored sideways with a rotation tag. Even, for x264.
+    private static func videoSize(_ src: URL) throws -> (Int, Int) {
+        guard let ffprobe = Tools.ffprobe else { throw ConvertError("ffprobe not found") }
+        let out = try captureTool(ffprobe, ["-v", "error", "-select_streams", "v:0", "-show_entries",
+                                            "stream=width,height:stream_side_data=rotation:stream_tags=rotate", "-of", "default=nw=1", src.path])
+        var values: [String: Int] = [:]
+        for line in out.split(separator: "\n") {
+            let parts = line.split(separator: "=", maxSplits: 1)
+            if parts.count == 2, let value = Double(parts[1]) { values[String(parts[0])] = Int(value) }
+        }
+        guard var w = values["width"], var h = values["height"], w > 0, h > 0 else { throw ConvertError("Couldn’t read the video") }
+        if abs(values["rotation"] ?? values["TAG:rotate"] ?? 0) % 180 == 90 { swap(&w, &h) }
+        return (w / 2 * 2, h / 2 * 2)
+    }
+
     /// Cuts [start, end] out of a video or audio file. Video is re-encoded so the cut lands on the exact frame.
     static func trim(_ src: URL, start: Double, end: Double) throws -> URL {
         let isVideo = Kind.of(src) == .video
@@ -263,6 +350,16 @@ enum FileOps {
 
     static func setChannels(_ src: URL, _ channels: Int) throws -> URL {
         try reencodeAudio(src, suffix: channels == 1 ? "mono" : "stereo", extra: ["-ac", String(channels)])
+    }
+
+    /// A video of the moving waveform, for posting audio where only video is accepted.
+    static func waveformVideo(_ src: URL) throws -> URL {
+        let graph = "[0:a]aformat=channel_layouts=mono,showwaves=s=1280x720:mode=cline:rate=30:colors=0xFFB340[w];"
+            + "color=c=0x1C1C1E:s=1280x720:r=30[bg];[bg][w]overlay=shortest=1,format=yuv420p[v]"
+        let dst = output(src, String(localized: "waveform"), ext: "mp4")
+        try runFFmpeg(["-i", src.path, "-filter_complex", graph, "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-preset", "medium",
+                       "-crf", "23", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart"], output: dst)
+        return dst
     }
 
     private static func reencodeAudio(_ src: URL, suffix: String, filter: String? = nil, extra: [String] = []) throws -> URL {

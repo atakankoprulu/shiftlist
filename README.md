@@ -6,8 +6,8 @@ Select files in Finder, tap **Shift** once, and a small list opens under your cu
 
 | Key | Tab | What's inside |
 | --- | --- | --- |
-| ⇧ Shift | Convert | JPG, PNG, HEIC, AVIF, PDF, MP4, MP3, DOCX, ZIP… |
-| ⌃ Control | Tools | compress, strip metadata, crop, redact, trim, speed, split… |
+| ⇧ Shift | Convert | JPG, PNG, HEIC, AVIF, PDF, MP4, MP3, DOCX, ZIP, SRT/VTT subtitles… |
+| ⌃ Control | Tools | compress, strip metadata, crop, redact, trim, speed, split, collage, join videos, waveform video, read QR codes… |
 | ⌘ Command | Actions | AirDrop, pin on screen, copy, move, copy path, Terminal |
 
 Pick with the mouse, the arrow keys, or 1–9. Esc closes. New files are always written next to the original; the original is never touched.
@@ -30,6 +30,11 @@ The interface is in English and Turkish and follows your system language.
 ```
 
 On first launch, allow **Accessibility** (to notice the Shift tap) and **Finder automation** (to read the selection).
+
+## Acknowledgments
+
+Collage, joining videos, waveform video, QR code reading and SRT ↔ VTT subtitle conversion were inspired by
+[Nashi](https://github.com/orkunisitmak/nashi-app) by Orkun Işıtmak (MIT). Shiftlist's implementations are its own; no Nashi code is included.
 
 ## License
 

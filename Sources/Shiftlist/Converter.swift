@@ -72,6 +72,7 @@ final class ConversionJob {
             case .markdown, .ebook: try convertWithPandoc(src, dst, ext)
             case .pages: try pagesExport(src, dst, ext)
             case .archive: try convertArchive(src, dst, ext)
+            case .subtitle: try Subtitles.convert(src, dst, ext)
             case .pdf: break
             }
         } catch {

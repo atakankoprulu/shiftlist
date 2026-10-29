@@ -4,7 +4,7 @@ import SwiftUI
 // Command-line entry points, handy for testing without clicking around in Finder:
 //   Shiftlist --targets <dosyalar…>                      formats offered for the files
 //   Shiftlist --convert <format> <dosyalar…>              convert and print the outputs
-//   Shiftlist --tool <araç-id> <dosyalar…>                run a Tools item (ids as in Menus.swift, e.g. compress-1)
+//   Shiftlist --tool <araç-id> <dosyalar…>                run a Tools item (ids as in Menus.swift, e.g. compress-1, qr)
 //   Shiftlist --edit-test <görsel>                        editor pipeline: crop top-left 60%, redact, draw
 //   Shiftlist --snapshot <out.png> <mod> <dosyalar…>      render the palette to a PNG (mod: convert, tools, actions)
 let args = Array(CommandLine.arguments.dropFirst())
@@ -47,18 +47,30 @@ case "--convert" where args.count >= 3:
 
 case "--tool" where args.count >= 3:
     let files = fileURLs(args.dropFirst(2))
-    guard let item = findItem(args[1], in: Menus.items(for: files, mode: .tools)),
-          case .each(_, _, let operation) = item.action else {
-        print("Tool not found: \(args[1])")
-        exit(2)
+    let item = findItem(args[1], in: Menus.items(for: files, mode: .tools))
+    if args[1] == "qr" {
+        for file in files { print("\(file.lastPathComponent): \(((try? CodeReader.payloads(in: file)) ?? []).joined(separator: " | "))") }
+        exit(0)
     }
     app.setActivationPolicy(.prohibited)
-    DispatchQueue.global().async {
-        var result = JobResult()
-        for file in files {
-            do { result.outputs.append(try operation(file)) } catch { result.failures.append((file, error.localizedDescription)) }
+    switch item?.action {
+    case .each(_, _, let operation):
+        DispatchQueue.global().async {
+            var result = JobResult()
+            for file in files {
+                do { result.outputs.append(try operation(file)) } catch { result.failures.append((file, error.localizedDescription)) }
+            }
+            printResult(result)
         }
-        printResult(result)
+    case .combine(_, let operation):
+        DispatchQueue.global().async {
+            var result = JobResult()
+            do { result.outputs.append(try operation(files)) } catch { result.failures.append((files[0], error.localizedDescription)) }
+            printResult(result)
+        }
+    default:
+        print("Tool not found: \(args[1])")
+        exit(2)
     }
     app.run()
 

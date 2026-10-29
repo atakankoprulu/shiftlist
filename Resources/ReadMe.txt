@@ -21,8 +21,8 @@ You're ready when the "Shiftlist is ready" notification appears.
 
 USAGE
 Select one or more files in Finder, tap Shift once and let go. The list opens under your cursor.
-  ⇧ Shift     Convert   — JPG, PNG, HEIC, PDF, MP4, MP3, DOCX, ZIP…
-  ⌃ Control   Tools     — compress, strip metadata, crop, redact, trim, speed, split…
+  ⇧ Shift     Convert   — JPG, PNG, HEIC, PDF, MP4, MP3, DOCX, ZIP, SRT/VTT…
+  ⌃ Control   Tools     — compress, strip metadata, crop, redact, trim, speed, split, collage, join, read QR codes…
   ⌘ Command   Actions   — AirDrop, pin, copy, move, copy path, Terminal
 Esc closes. You can also pick with 1–9. New files are always saved next to the original; the original is never touched.
 Settings and "Launch at Login" are in the Shiftlist menu bar icon.
@@ -33,6 +33,10 @@ NOTES
 • Word → PDF uses Pages when it's installed (better page layout).
 • Pressing Option five times in a row turns on macOS "Mouse Keys" (keyboard letters start moving the pointer).
   If that happens, press Option five times again.
+
+THANKS
+Collage, join videos, waveform video, QR reading and subtitle conversion were inspired by
+Nashi (https://github.com/orkunisitmak/nashi-app) by Orkun Işıtmak.
 
 LICENSE
 Bundles FFmpeg (https://ffmpeg.org) for video and audio. FFmpeg is licensed under the GPL;
