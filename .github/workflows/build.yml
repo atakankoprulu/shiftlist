@@ -1,0 +1,31 @@
+# Builds Shiftlist.dmg on a Mac. Every push checks that it compiles; a v* tag also publishes a release with the DMG.
+name: Build
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    # macOS 26 SDK: the palette uses the glass effect behind #available(macOS 26).
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg (bundled into the app)
+        run: brew install ffmpeg
+      - name: Build DMG
+        run: ./scripts/dist.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Shiftlist.dmg
+          path: Shiftlist.dmg
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" Shiftlist.dmg --title "Shiftlist ${GITHUB_REF_NAME#v}" --notes-file .github/release-notes.md
